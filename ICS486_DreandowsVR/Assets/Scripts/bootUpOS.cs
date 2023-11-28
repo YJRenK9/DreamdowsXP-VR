@@ -15,16 +15,19 @@ public class bootUpOS : MonoBehaviour
 {
     public Slider loadingBar;
     public GameObject screenContents;
+    public RawImage currentScreen;
     public RawImage nextScreen;
     public AudioSource theAudio;
     
-
     GameObject logo1;
     GameObject title;
     GameObject logo2;
     GameObject subtitle;
     GameObject bar;
     GameObject filledProgress;
+
+    GameObject specialLogo1;
+    GameObject specialLogo2;
 
     Color opacityElement1;
     Color opacityElement2;
@@ -33,14 +36,22 @@ public class bootUpOS : MonoBehaviour
     Color opacityElement5;
     Color opacityElement6;
 
-    Dictionary<GameObject, Color> UI_Elements;
+    Color opacityElement7;
+    Color opacityElement8;
 
-    
+    Dictionary<GameObject, Color> UI_Elements;
+    Dictionary<GameObject, Color> UI_Elements2;
 
     Color temp_color; // used to store the selected Color object in the dictionary to be modified in order to update the original opacity values
+    RawImage ri; // used as a temporary variable for RawImages from GameObjects
 
-    bool doneLoading = false; // used so the fade transition doesn't repeat itself
-
+     // used so the fade transition doesn't repeat itself
+    bool doneLoading = false;
+    bool doneLoading2 = false;
+    bool doneLoading3 = false;
+    bool doneLoading4 = false;
+    bool doneLoading5 = false;
+    
     //float elapsedTime = 0;
 
     
@@ -62,6 +73,9 @@ public class bootUpOS : MonoBehaviour
         bar = waitingBar.transform.GetChild(0).gameObject;
         // the child is the Rect Transform game object (Fill Area) and the grandchild is the Image object (Fill)
         filledProgress = waitingBar.transform.GetChild(1).gameObject.transform.GetChild(0).gameObject;
+
+        specialLogo1 = screenContents.transform.GetChild(5).gameObject;
+        specialLogo2 = screenContents.transform.GetChild(6).gameObject;
 
         // logo1.GetComponent<RawImage>().color.a = 0; // can't do this as the LHS is not a variable
         
@@ -95,9 +109,20 @@ public class bootUpOS : MonoBehaviour
         opacityElement6.a = 0;
         filledProgress.GetComponent<Image>().color = opacityElement6;
 
+        opacityElement7 = specialLogo1.GetComponent<RawImage>().color;
+        opacityElement7.a = 0;
+        specialLogo1.GetComponent<RawImage>().color = opacityElement7;
+
+        opacityElement8 = specialLogo2.GetComponent<RawImage>().color;
+        opacityElement8.a = 0;
+        specialLogo2.GetComponent<RawImage>().color = opacityElement8;
+
         // to initialize the dictionary in order to avoid NullReferenceException (means the elements are null)
         // used to store and update the UI elements' color opacity
         UI_Elements = new Dictionary<GameObject, Color>();
+
+        // same as UI_Elements but for UI images when background is white instead of black
+        UI_Elements2 = new Dictionary<GameObject, Color>();
 
         // since you can't directly change alpha values from the source, create temp elements to update those values 
         UI_Elements.Add(logo1, opacityElement1);
@@ -107,8 +132,14 @@ public class bootUpOS : MonoBehaviour
         UI_Elements.Add(bar, opacityElement5);
         UI_Elements.Add(filledProgress, opacityElement6);
 
+        UI_Elements2.Add(specialLogo1, opacityElement7);
+        UI_Elements2.Add(specialLogo2, opacityElement8);
+
         temp_color = new Color();
 
+        currentScreen.color = Color.white;
+
+        // hide the welcome screen
         nextScreen.enabled = false;
 
         // In this case, must play the sound in the start/setup function (so program will realize the user wants to play the sound, but not just yet)
@@ -132,60 +163,19 @@ public class bootUpOS : MonoBehaviour
         //Debug.Log(UI_Elements.Values.ToList().Any(color => color.a < 1));
         //Debug.Log(UI_Elements.Values.ToList()[0]);
 
-        // checks if all of the UI element's alpha values are below 1 (in other words, checking if they're not opaque)
-        if (UI_Elements.Values.Any(color => color.a < 1) && !doneLoading) {
-             //Debug.Log("translucent");
-             // need to use .ToList() or else the console will throw InvalidOperationException (can't modify dict elements during traversal)
-            foreach (GameObject ui_element in UI_Elements.Keys.ToList()) {
-                // if the game object has a Raw Image component
-                if (ui_element.TryGetComponent<RawImage>(out RawImage ri)) {
-                    // the dict value is stored in the temp variable 
-                    temp_color = UI_Elements[ui_element];
-                    
-                    // increment the opacity value of the temp var
-                    temp_color.a += 0.005f;
-                    
-                    // update both the image's opacity and its alpha value
-                    ri.color = temp_color;
-                    UI_Elements[ui_element] = temp_color;
-                    
-                    //Debug.Log(ri.color.a);
-                    //Debug.Log(alphaColors[n].a);
-                }
-                // if the game object has a TextMeshProUGUI component
-                if (ui_element.TryGetComponent<TextMeshProUGUI>(out TextMeshProUGUI t)) {
-                    temp_color = UI_Elements[ui_element];
-                    temp_color.a += 0.005f;
-                    t.color = temp_color;
-                    UI_Elements[ui_element] = t.color;
-                    
-                    //Debug.Log(t.color.a);
-                }
-                // if the game object has an image component
-                if (ui_element.TryGetComponent<Image>(out Image i)) {
-                    temp_color = UI_Elements[ui_element];
-                    temp_color.a += 0.005f;
-                    i.color = temp_color;
-                    UI_Elements[ui_element] = i.color;
-                    
-                    //Debug.Log(i.color.a);
-                }
-                //Debug.Log(showUI[n]);
-            }
-            // pauses the sound in update function
-            theAudio.Pause(); 
-        } else {
-            // used to not loop through the UI elements fading
-            doneLoading = true;
+        StartCoroutine("LogoScreen");
+
+        if (doneLoading5) 
+        {
+            // disable the two images in case they appear during the loading screen
+            specialLogo1.GetComponent<RawImage>().enabled = false;
+            specialLogo2.GetComponent<RawImage>().enabled = false;
             
-            if (loadingBar.value < 100) {
-        //Debug.Log(screenContents.transform.GetChild(0).gameObject);
-        //Debug.Log(screenContents.transform.GetChild(0).gameObject.GetType());
-        //Debug.Log(screenContents.transform.GetChild(1).gameObject.GetComponent<TextMeshProUGUI>());
-        //Debug.Log(screenContents.transform.GetChild(0).gameObject.GetType() == logo1.GetType());
-                loadingBar.value += 0.1f;
-            } else {
-                //Debug.Log("Done!");
+            // checks if all of the UI element's alpha values are below 1 (in other words, checking if they're not opaque)
+            if (UI_Elements.Values.Any(color => color.a < 1) && !doneLoading3) {
+                currentScreen.color = Color.black;
+                //Debug.Log("translucent");
+                // need to use .ToList() or else the console will throw InvalidOperationException (can't modify dict elements during traversal)
                 foreach (GameObject ui_element in UI_Elements.Keys.ToList()) {
                     // if the game object has a Raw Image component
                     if (ui_element.TryGetComponent<RawImage>(out RawImage ri)) {
@@ -193,7 +183,7 @@ public class bootUpOS : MonoBehaviour
                         temp_color = UI_Elements[ui_element];
                         
                         // increment the opacity value of the temp var
-                        temp_color.a = 0;
+                        temp_color.a += 0.005f;
                         
                         // update both the image's opacity and its alpha value
                         ri.color = temp_color;
@@ -205,7 +195,7 @@ public class bootUpOS : MonoBehaviour
                     // if the game object has a TextMeshProUGUI component
                     if (ui_element.TryGetComponent<TextMeshProUGUI>(out TextMeshProUGUI t)) {
                         temp_color = UI_Elements[ui_element];
-                        temp_color.a = 0;
+                        temp_color.a += 0.005f;
                         t.color = temp_color;
                         UI_Elements[ui_element] = t.color;
                         
@@ -214,7 +204,7 @@ public class bootUpOS : MonoBehaviour
                     // if the game object has an image component
                     if (ui_element.TryGetComponent<Image>(out Image i)) {
                         temp_color = UI_Elements[ui_element];
-                        temp_color.a = 0;
+                        temp_color.a += 0.005f;
                         i.color = temp_color;
                         UI_Elements[ui_element] = i.color;
                         
@@ -222,12 +212,65 @@ public class bootUpOS : MonoBehaviour
                     }
                     //Debug.Log(showUI[n]);
                 }
-                // starts the coroutine right after the UI elements become invisible (again)
-                StartCoroutine("ActivateWelcomeScreen");
-                // still gets called because StartCoroutine is still being called
-                // Debug.Log("evaded");
+                // pauses the sound in update function
+                //theAudio.Pause(); 
+            } else {
+                // used to not loop through the UI elements fading
+                doneLoading3 = true;
+                
+                if (loadingBar.value < 100) {
+            //Debug.Log(screenContents.transform.GetChild(0).gameObject);
+            //Debug.Log(screenContents.transform.GetChild(0).gameObject.GetType());
+            //Debug.Log(screenContents.transform.GetChild(1).gameObject.GetComponent<TextMeshProUGUI>());
+            //Debug.Log(screenContents.transform.GetChild(0).gameObject.GetType() == logo1.GetType());
+                    loadingBar.value += 0.1f;
+                } else {
+                    //Debug.Log("Done!");
+                    foreach (GameObject ui_element in UI_Elements.Keys.ToList()) {
+                        // if the game object has a Raw Image component
+                        if (ui_element.TryGetComponent<RawImage>(out RawImage ri)) {
+                            // the dict value is stored in the temp variable 
+                            temp_color = UI_Elements[ui_element];
+                            
+                            // increment the opacity value of the temp var
+                            temp_color.a = 0;
+                            
+                            // update both the image's opacity and its alpha value
+                            ri.color = temp_color;
+                            UI_Elements[ui_element] = temp_color;
+                            
+                            //Debug.Log(ri.color.a);
+                            //Debug.Log(alphaColors[n].a);
+                        }
+                        // if the game object has a TextMeshProUGUI component
+                        if (ui_element.TryGetComponent<TextMeshProUGUI>(out TextMeshProUGUI t)) {
+                            temp_color = UI_Elements[ui_element];
+                            temp_color.a = 0;
+                            t.color = temp_color;
+                            UI_Elements[ui_element] = t.color;
+                            
+                            //Debug.Log(t.color.a);
+                        }
+                        // if the game object has an image component
+                        if (ui_element.TryGetComponent<Image>(out Image i)) {
+                            temp_color = UI_Elements[ui_element];
+                            temp_color.a = 0;
+                            i.color = temp_color;
+                            UI_Elements[ui_element] = i.color;
+                            
+                            //Debug.Log(i.color.a);
+                        }
+                        //Debug.Log(showUI[n]);
+                    }
+                    // starts the coroutine right after the UI elements become invisible (again)
+                    StartCoroutine("ActivateWelcomeScreen");
+                    // still gets called because StartCoroutine is still being called
+                    // Debug.Log("evaded");
+                }
             }
         }
+
+        
 
         // if (loadingBar.value < 100) {
         //     //Debug.Log(screenContents.transform.GetChild(0).gameObject);
@@ -238,6 +281,86 @@ public class bootUpOS : MonoBehaviour
         // } else {
         //     Debug.Log("Done!");
         // }
+    }
+
+    IEnumerator LogoScreen()
+    {
+        // pauses audio until UnPause() is called
+        theAudio.Pause();
+        //Debug.Log(doneLoading4);
+        if (!doneLoading4) {
+            //List<GameObject> ui_elements = UI_Elements.Keys.ToList();
+            if (opacityElement7.a < 1 && !doneLoading) {
+                //Debug.Log("translucent");
+                // need to use .ToList() or else the console will throw InvalidOperationException (can't modify dict elements during traversal)
+                ri = specialLogo1.GetComponent<RawImage>();
+                    
+                temp_color = opacityElement7;
+                        
+                // increment the opacity value of the temp var
+                temp_color.a += 0.01f;
+                        
+                // update both the image's opacity and its alpha value
+                ri.color = temp_color;
+                opacityElement7 = temp_color;
+
+                // used so the second and "third" if statements don't run
+                //doneLoading2 = true;
+                //doneLoading3 = true;
+            } else {
+                // used to not loop through the UI elements fading
+                doneLoading = true;
+                
+                // used to display the logo for a few seconds
+                yield return new WaitForSeconds(2.5f);
+
+                // decrement the opacity value of the temp var
+                temp_color.a -= 0.01f;
+                        
+                // update both the image's opacity and its alpha value
+                ri.color = temp_color;
+                opacityElement7 = temp_color;
+
+                // used '<' instead of '==' to enable the else statement
+                if (opacityElement7.a < 0)   doneLoading4 = true;
+            }
+        } else {
+            if (opacityElement8.a < 1 && !doneLoading2) {
+                //Debug.Log("translucent");
+                // need to use .ToList() or else the console will throw InvalidOperationException (can't modify dict elements during traversal)
+                ri = specialLogo2.GetComponent<RawImage>();
+                    
+                temp_color = opacityElement8;
+                // used to display the logo for a few seconds
+                yield return new WaitForSeconds(2.5f);         
+                // increment the opacity value of the temp var
+                temp_color.a += 0.01f;
+                        
+                // update both the image's opacity and its alpha value
+                ri.color = temp_color;
+                opacityElement8 = temp_color;
+                
+            } else {
+                // used to not loop through the UI elements fading
+                doneLoading2 = true;
+                
+                
+
+                // decrement the opacity value of the temp var
+                temp_color.a -= 0.01f;
+                        
+                // update both the image's opacity and its alpha value
+                ri.color = temp_color;
+                opacityElement8 = temp_color;
+                
+                // move onto the loading screen when the second logo is invisible
+                if (opacityElement8.a < 0) doneLoading5 = true;
+            }
+        }
+
+        
+
+        
     }
 
     IEnumerator ActivateWelcomeScreen() 
