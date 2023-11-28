@@ -331,8 +331,10 @@ public class bootUpOS : MonoBehaviour
                 ri = specialLogo2.GetComponent<RawImage>();
                     
                 temp_color = opacityElement8;
-                // used to display the logo for a few seconds
-                yield return new WaitForSeconds(2.5f);         
+                
+                // used to display the logo for a few seconds (put here to delay time in between logos disappearing and reappearing)
+                yield return new WaitForSeconds(2.5f);   
+
                 // increment the opacity value of the temp var
                 temp_color.a += 0.01f;
                         
